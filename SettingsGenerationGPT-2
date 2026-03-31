@@ -1,0 +1,60 @@
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+# Загрузка модели
+model_name = "gpt2"
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+model.eval()
+
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+print("Модель загружена\n")
+
+# Генерация
+def generate_text(prompt, max_new_tokens=50, do_sample=False, temperature=1.0, top_p=1.0):
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True)
+    
+    with torch.no_grad():
+        outputs = model.generate(
+            inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            max_new_tokens=max_new_tokens,
+            do_sample=do_sample,
+            temperature=temperature,
+            top_p=top_p,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+    
+    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return generated_text
+
+# Ввод промпта
+user_prompt = input("Введите промпт: ")
+
+# Выбор метода генерации
+print("\nВыберите метод генерации:")
+print("1 - Greedy Search ")
+print("2 - Sampling ")
+method = input()
+
+if method == "1":
+    print("\nГенерация с Greedy Search...")
+    result = generate_text(user_prompt, max_new_tokens=100, do_sample=False)
+    
+elif method == "2":
+    print("\nДля Sampling можно настроить параметры:")
+    temperature = float(input("Temperature: "))
+    top_p = float(input("Top-p: "))
+    
+    print(f"\nГенерация с Sampling (temperature={temperature}, top_p={top_p})...")
+    result = generate_text(user_prompt, max_new_tokens=100, do_sample=True, 
+                          temperature=temperature, top_p=top_p)
+    
+else:
+    print("Неверный выбор. Использую Greedy Search.")
+    result = generate_text(user_prompt, max_new_tokens=100, do_sample=False)
+
+print(f"\nРезультат:\n{result}")
